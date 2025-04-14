@@ -1,0 +1,40 @@
+.header {
+    position: sticky;
+    top: 0;
+    background-color: #d00;
+    color: white;
+    height: 65px;
+    width: 100%;
+    z-index: 99;
+    transition: all 0.3s;
+
+    .header_top {
+        display: flex;
+        height: 65px;
+        padding: 0;
+        // justify-content: center;
+    }
+
+    .container {
+        max-width: 1200px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin: 0 auto;
+        width: 100%;
+
+        .logo {
+            display: flex;
+            max-width: 260px;
+            width: 100%;
+            align-items: center;
+
+            img {
+                display: block;
+                height: 45px;
+                max-width: 245px;
+                object-fit: contain;
+            }
+        }
+    }
+}
