@@ -1,4 +1,3 @@
-// src/components/ProfileEdit.jsx
 import InputTextHookForm from "@/components/InputText/InputTextHookForm";
 import authService from "@/services/authService";
 import profileSchema from "@/utils/schema/profileSchema";
@@ -8,7 +7,6 @@ import { Controller, useForm } from "react-hook-form";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import { format } from "date-fns";
-import httpRequest from "@/utils/httpRequest";
 
 const ProfileEdit = () => {
     const { username } = useParams();
@@ -18,6 +16,7 @@ const ProfileEdit = () => {
     const [error_s, setError_s] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
     const prevImageRef = useRef(null);
+    const prevFileRef = useRef(null);
 
     const {
         register,
@@ -70,12 +69,21 @@ const ProfileEdit = () => {
     // Xử lý preview ảnh
     useEffect(() => {
         if (imageValue && imageValue instanceof File) {
-            if (previewImage && previewImage !== user?.image) {
+            if (imageValue !== prevFileRef.current) {
+                if (previewImage && previewImage !== user?.image) {
+                    URL.revokeObjectURL(previewImage);
+                }
+                const newPreview = URL.createObjectURL(imageValue);
+                setPreviewImage(newPreview);
+                prevImageRef.current = newPreview;
+                prevFileRef.current = imageValue;
+            }
+        } else if (!imageValue && previewImage !== user?.image) {
+            if (previewImage) {
                 URL.revokeObjectURL(previewImage);
             }
-            const newPreview = URL.createObjectURL(imageValue);
-            setPreviewImage(newPreview);
-            prevImageRef.current = newPreview;
+            setPreviewImage(user?.image || null);
+            prevFileRef.current = null;
         }
     }, [imageValue, user?.image, previewImage]);
 
@@ -85,7 +93,8 @@ const ProfileEdit = () => {
             URL.revokeObjectURL(previewImage);
         }
         setPreviewImage(user?.image || null);
-        reset({ ...watch(), image: null }); // Reset trường image
+        reset({ ...watch(), image: null });
+        prevFileRef.current = null;
     };
 
     // Cleanup khi unmount
@@ -160,53 +169,43 @@ const ProfileEdit = () => {
 
     const onSubmit = async (data) => {
         try {
-            const formData = new FormData();
-            // if (data.birthDate) {
-            //     data.birthDate = format(new Date(data.birthDate), "yyyy-MM-dd");
-            //     console.log(data.birthDate);
-            // }
-            const payload = Object.fromEntries(
-                Object.entries(data).filter(([key, value]) => {
-                    if (key === "image") return false;
-                    return (
-                        value !== null && value !== "" && value !== undefined
-                    );
-                })
-            );
+            console.log("Dữ liệu form:", data);
 
+            // Tách thông tin người dùng
+            const payload = { ...data };
+            delete payload.image;
             if (payload.birthDate) {
                 payload.birthDate = format(
                     new Date(payload.birthDate),
                     "yyyy-MM-dd"
                 );
             }
+            // console.log("Payload thông tin:", payload);
 
-            Object.entries(payload).forEach(([key, value]) => {
-                formData.append(key, value);
-            });
+            // Gửi thông tin người dùng qua JSON
+            await authService.updateUserProfile(username, payload);
 
-            if (data.image) {
-                formData.append("image", data.image);
-            }
-
-            const updatedUser = await httpRequest.put(
-                `/users/${username}`,
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
+            // Fetch lại dữ liệu để đồng bộ
+            const updatedUser = await authService.getUserProfile(username);
             const updatedData = updatedUser.data || updatedUser;
+            // console.log("Dữ liệu từ server:", updatedData);
+
             setUser(updatedData);
             setPreviewImage(updatedData.image || null);
             reset({ ...updatedData, image: null });
+            prevFileRef.current = null;
             toast.success("Cập nhật thông tin thành công!", {
-                onClose: () => navigate(`/profile/${username}`), // Chuyển hướng sau khi toast đóng
+                onClose: () => navigate(`/profile/${username}`),
             });
         } catch (error) {
-            toast.error(error.message || "Có lỗi xảy ra, vui lòng thử lại");
+            console.error(
+                "Lỗi khi cập nhật:",
+                error.response?.data || error.message
+            );
+            toast.error(
+                error.response?.data?.message ||
+                    "Có lỗi xảy ra, vui lòng thử lại"
+            );
         }
     };
 
@@ -230,7 +229,7 @@ const ProfileEdit = () => {
                             <img
                                 src={previewImage}
                                 alt="Avatar Preview"
-                                style={{ width: "100px", marginBottom: "10px" }}
+                                style={{ width: "200px", marginBottom: "10px" }}
                             />
                         ) : (
                             <p>Chưa có ảnh đại diện</p>
@@ -262,7 +261,6 @@ const ProfileEdit = () => {
                             >
                                 Hủy bỏ
                             </button>
-                            <button type="submit">Cập nhật</button>
                         </div>
                     )}
                 </div>
@@ -272,14 +270,12 @@ const ProfileEdit = () => {
                     error={errors.lastName?.message}
                     {...register("lastName")}
                 />
-
                 <InputTextHookForm
                     label="Tên"
                     name="firstName"
                     error={errors.firstName?.message}
                     {...register("firstName")}
                 />
-
                 <InputTextHookForm
                     label="Email"
                     name="email"
@@ -287,7 +283,6 @@ const ProfileEdit = () => {
                     error={errors.email?.message}
                     {...register("email")}
                 />
-
                 <InputTextHookForm
                     label="Số điện thoại"
                     name="phone"
@@ -295,14 +290,12 @@ const ProfileEdit = () => {
                     error={errors.phone?.message}
                     {...register("phone")}
                 />
-
                 <InputTextHookForm
                     label="Username"
                     name="username"
                     error={errors.username?.message}
                     {...register("username")}
                 />
-
                 <InputTextHookForm
                     label="Tuổi"
                     name="age"
@@ -310,7 +303,6 @@ const ProfileEdit = () => {
                     error={errors.age?.message}
                     {...register("age")}
                 />
-
                 <div>
                     <label>Giới tính:</label>
                     <select {...register("gender")}>
@@ -320,7 +312,6 @@ const ProfileEdit = () => {
                     </select>
                     {errors.gender && <p>{errors.gender.message}</p>}
                 </div>
-
                 <InputTextHookForm
                     label="Ngày sinh"
                     name="birthDate"

@@ -3,17 +3,19 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import authService from "@/services/authService";
 import { ToastContainer } from "react-toastify";
+import { useLoading } from "@/hooks/useLoading";
 
 const Profile = () => {
     const { username } = useParams();
     const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [error_s, setError_s] = useState(null);
+    const { setLoading } = useLoading();
 
     useEffect(() => {
         const fetchData = async () => {
+            setLoading(true);
             try {
                 const [profileResponse, currentUserData] = await Promise.all([
                     authService.getUserProfile(username),
@@ -23,16 +25,15 @@ const Profile = () => {
                 let profileData = profileResponse.data || profileResponse;
                 setUser(profileData);
                 setCurrentUser(currentUserData);
-                setLoading(false);
             } catch (error) {
                 setError_s(error.message);
+            } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, [username]);
+    }, [username, setLoading]);
 
-    if (loading) return <div style={{ textAlign: "center" }}>Loading...</div>;
     if (error_s) return <div style={{ textAlign: "center" }}>{error_s}</div>;
     if (!user)
         return (

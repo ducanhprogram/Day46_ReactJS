@@ -13,14 +13,17 @@ import { useOverlay } from "@/contexts/OverlayContext";
 import Register from "../Register";
 import styles from "./Login.module.scss";
 import clsx from "clsx";
-import { useContext, useEffect } from "react";
-import { UserContext } from "@/contexts/UserContext";
+import useUser from "@/hooks/useUser";
+import { useLoading } from "@/hooks/useLoading";
+import { useEffect } from "react";
 
 const Login = () => {
     const navigate = useNavigate();
     const query = useQuery();
     const { closeOverlay, openOverlay } = useOverlay();
-    const { setUser } = useContext(UserContext);
+    // const { setUser } = useContext(UserContext);
+    const { setUser } = useUser();
+    const { setLoading } = useLoading();
 
     //resolver: Là cầu đổi chuyển đổi giúp React Hook Form sử dụng thư viện validation bên ngoài (Yup)
     const {
@@ -57,12 +60,12 @@ const Login = () => {
         if (!isValid) {
             return;
         }
+        setLoading(true);
         //call API
         try {
             const response = await authService.login(data);
-
-            const user = await authService.getCurrentUser();
-            setUser(user);
+            const userData = await authService.getCurrentUser();
+            setUser(userData);
             if (response.status === "success" && response.data.access_token) {
                 alert("Đăng nhập thành công");
                 closeOverlay();
@@ -91,6 +94,8 @@ const Login = () => {
                     message: "Đã có lỗi xảy ra. Vui lòng thử lại sau.",
                 });
             }
+        } finally {
+            setLoading(false);
         }
     };
 

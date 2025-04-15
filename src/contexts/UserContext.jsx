@@ -18,6 +18,7 @@ export const UserProvider = ({ children }) => {
                 setUser(data);
             } catch (error) {
                 console.error("Lỗi khi lấy dữ liệu người dùng: ", error);
+                setUser(null);
             } finally {
                 setLoading(false);
             }
